@@ -10,7 +10,9 @@ use reqwest::{Client, Method, Response};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use shared::{
     musicbrainz::Track,
-    slskd::{AlbumResult, MatchResult, SearchResult, TrackResult},
+    slskd::{
+        AlbumResult, DownloadRequest, DownloadResponse, MatchResult, SearchResult, TrackResult,
+    },
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -420,46 +422,57 @@ impl SoulseekClient {
             .collect()
     }
 
-    pub async fn download(&self, username: &str, filename: &str, file_size: i64) -> Result<String> {
-        info!("Attempting to download: {} from {}", filename, username);
-        let download_path_str = self.download_path.to_str().unwrap_or("").to_string();
-        let payload = vec![DownloadRequestFile {
-            filename,
-            size: file_size,
-            path: download_path_str,
-        }];
-        let endpoint = format!("transfers/downloads/{username}");
+    pub async fn download(&self, req: Vec<TrackResult>) -> Result<Vec<DownloadResponse>> {
+        let mut requests_by_username: HashMap<String, Vec<DownloadRequestFile>> = HashMap::new();
+
         #[derive(Deserialize)]
-        struct DownloadResponse {
+        struct SlskdDownloadResponse {
             id: String,
         }
-        let resp_text = self
-            .client
-            .post(self.base_url.join(&format!("api/v0/{endpoint}"))?)
-            .header("X-API-Key", self.api_key.as_deref().unwrap_or(""))
-            .json(&payload)
-            .send()
-            .await?
-            .text()
-            .await?;
-        if let Ok(single_resp) = serde_json::from_str::<DownloadResponse>(&resp_text) {
-            Ok(single_resp.id)
-        } else if let Ok(multi_resp) = serde_json::from_str::<Vec<DownloadResponse>>(&resp_text) {
-            multi_resp
-                .first()
-                .map(|d| d.id.clone())
-                .ok_or_else(|| SoulseekError::Api {
-                    status: 200,
-                    message: "Empty download response array".to_string(),
-                })
-        } else {
-            Ok(filename.to_string())
+
+        info!("Attempting to download: {} files...", req.len());
+        for req in req {
+            let list = requests_by_username.entry(req.base.username).or_default();
+            list.push(DownloadRequestFile {
+                filename: req.base.filename,
+                size: req.base.size,
+            });
         }
+
+        let mut res = vec![];
+
+        for (username, file_requests) in requests_by_username.into_iter() {
+            let endpoint = format!("transfers/downloads/{username}");
+
+            let resp_text = self
+                .client
+                .post(self.base_url.join(&format!("api/v0/{endpoint}"))?)
+                .header("X-API-Key", self.api_key.as_deref().unwrap_or(""))
+                .json(&file_requests)
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            info!("\n\n{resp_text}\n\n");
+
+            if let Ok(single_res) = serde_json::from_str::<SlskdDownloadResponse>(&resp_text) {
+                res.push(DownloadResponse { id: single_res.id });
+            } else if let Ok(multi_res) =
+                serde_json::from_str::<Vec<SlskdDownloadResponse>>(&resp_text)
+            {
+                res.extend(multi_res.into_iter().map(|d| DownloadResponse { id: d.id }));
+            }
+        }
+
+        Ok(res)
     }
+
     pub async fn get_all_downloads(&self) -> Result<Vec<DownloadStatus>> {
         self.make_request(Method::GET, "transfers/downloads", None::<()>)
             .await
     }
+
     pub async fn cancel_download(
         &self,
         username: &str,

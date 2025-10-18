@@ -4,6 +4,19 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
+pub struct DownloadRequest {
+    pub username: String,
+    pub filename: String,
+    pub file_size: i64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DownloadResponse {
+    pub id: String,
+    // pub track: TrackResult,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct MatchResult {
     pub guessed_artist: String,
     pub guessed_album: String,

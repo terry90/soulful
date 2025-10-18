@@ -1,13 +1,45 @@
-# API
+# API Crate
 
-This crate contains all shared fullstack server functions. This is a great place to place any server-only logic you would like to expose in multiple platforms like a method that accesses your database or a method that sends an email.
+This crate exposes server-side functionality to the frontend using `dioxus` server functions. It acts as a bridge between the UI components and the core application logic implemented in the `soulful` crate.
 
-This crate will be built twice:
-1. Once for the server build with the `dioxus/server` feature enabled
-2. Once for the client build with the client feature disabled
+## Server Functions
 
-During the server build, the server functions will be collected and hosted on a public API for the client to call. During the client build, the server functions will be compiled into the client build.
+The following server functions are exposed to the frontend:
 
-## Dependencies
+- **`search_album(input: SearchQuery) -> Result<Vec<SearchResult>, ServerFnError>`**:
 
-Most server dependencies (like sqlx and tokio) will not compile on client platforms like WASM. To avoid building server dependencies on the client, you should add platform specific dependencies under the `server` feature in the [Cargo.toml](../Cargo.toml) file. More details about managing server only dependencies can be found in the [Dioxus guide](https://dioxuslabs.com/learn/0.6/guides/fullstack/managing_dependencies#adding-server-only-dependencies).
+  - **Description**: Searches for albums on MusicBrainz based on the provided query.
+  - **Parameters**:
+    - `input`: A `SearchQuery` struct containing the artist and album name.
+  - **Returns**: A `Vec<SearchResult>` containing a list of matching albums.
+
+- **`search_track(input: SearchQuery) -> Result<Vec<SearchResult>, ServerFnError>`**:
+
+  - **Description**: Searches for tracks on MusicBrainz.
+  - **Parameters**:
+    - `input`: A `SearchQuery` struct with the artist and track name.
+  - **Returns**: A `Vec<SearchResult>` with the search results.
+
+- **`find_album(id: String) -> Result<AlbumWithTracks, ServerFnError>`**:
+
+  - **Description**: Retrieves detailed information for a specific album from MusicBrainz, including its tracklist.
+  - **Parameters**:
+    - `id`: The MusicBrainz ID of the album.
+  - **Returns**: An `AlbumWithTracks` struct containing the album details.
+
+- **`search_downloads(data: DownloadQuery) -> Result<Vec<AlbumResult>, ServerFnError>`**:
+
+  - **Description**: Searches for available downloads on Soulseek for a given album and its tracks.
+  - **Parameters**:
+    - `data`: A `DownloadQuery` struct with the album and track information.
+  - **Returns**: A `Vec<AlbumResult>` with potential download candidates.
+
+- **`download(data: Vec<TrackResult>) -> Result<Vec<AlbumResult>, ServerFnError>`**:
+  - **Description**: Initiates the download of the selected tracks from Soulseek.
+  - **Parameters**:
+    - `data`: A `Vec<TrackResult>` containing the tracks to be downloaded.
+  - **Returns**: A `Vec<DownloadResponse>` indicating the status of each download.
+
+## Data Structures
+
+- **`SearchQuery`**: A struct used for sending search queries to the server. It includes optional fields for `artist` and the main `query`.

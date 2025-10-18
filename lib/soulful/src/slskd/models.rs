@@ -38,8 +38,7 @@ pub(crate) struct SearchResponse {
 }
 
 #[derive(Serialize)]
-pub(crate) struct DownloadRequestFile<'a> {
-    pub filename: &'a str,
+pub(crate) struct DownloadRequestFile {
+    pub filename: String,
     pub size: i64,
-    pub path: String,
 }

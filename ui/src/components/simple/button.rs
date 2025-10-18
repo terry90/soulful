@@ -8,7 +8,6 @@ pub enum ButtonVariant {
 }
 
 impl ButtonVariant {
-    // This function returns the appropriate Tailwind classes for each variant.
     fn get_classes(&self) -> &'static str {
         match self {
             ButtonVariant::Primary => "bg-teal-500 hover:bg-teal-600",

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use shared::{
     download::DownloadQuery,
     musicbrainz::{AlbumWithTracks, SearchResult},
-    slskd::AlbumResult,
+    slskd::{AlbumResult, DownloadResponse, TrackResult},
 };
 
 #[cfg(feature = "server")]
@@ -37,7 +37,6 @@ async fn slskd_search(
     album: String,
     tracks: Vec<Track>,
 ) -> Result<Vec<AlbumResult>, ServerFnError> {
-    let health = SLSKD_CLIENT.check_connection().await;
     let mut search = SLSKD_CLIENT
         .search(artist, album, tracks, Duration::seconds(45))
         .await
@@ -61,6 +60,14 @@ async fn slskd_search(
     Ok(search)
 }
 
+#[cfg(feature = "server")]
+async fn slskd_download(tracks: Vec<TrackResult>) -> Result<Vec<DownloadResponse>, ServerFnError> {
+    SLSKD_CLIENT
+        .download(tracks)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchQuery {
     pub artist: Option<String>,
@@ -73,7 +80,7 @@ pub async fn search_album(input: SearchQuery) -> Result<Vec<SearchResult>, Serve
         &input.artist,
         &input.query,
         musicbrainz::SearchType::Album,
-        10,
+        25,
     )
     .await?;
 
@@ -86,7 +93,7 @@ pub async fn search_track(input: SearchQuery) -> Result<Vec<SearchResult>, Serve
         &input.artist,
         &input.query,
         musicbrainz::SearchType::Track,
-        10,
+        25,
     )
     .await?;
 
@@ -101,6 +108,11 @@ pub async fn find_album(id: String) -> Result<AlbumWithTracks, ServerFnError> {
 }
 
 #[server]
-pub async fn download(data: DownloadQuery) -> Result<Vec<AlbumResult>, ServerFnError> {
+pub async fn search_downloads(data: DownloadQuery) -> Result<Vec<AlbumResult>, ServerFnError> {
     slskd_search(data.album.artist, data.album.title, data.tracks).await
+}
+
+#[server]
+pub async fn download(data: Vec<TrackResult>) -> Result<Vec<DownloadResponse>, ServerFnError> {
+    slskd_download(data).await
 }

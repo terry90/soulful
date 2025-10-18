@@ -4,12 +4,16 @@ pub mod track;
 use dioxus::logger::tracing::info;
 use dioxus::prelude::*;
 use shared::download::DownloadQuery;
-use shared::musicbrainz::{AlbumWithTracks, SearchResult, Track};
+use shared::musicbrainz::{AlbumWithTracks, SearchResult};
+use shared::slskd::{AlbumResult as SlskdAlbumResult, TrackResult as SlskdTrackResult};
 
 use track::TrackResult;
 
 use crate::search::album::AlbumResult;
 use crate::{Album, AlbumHeader, Button, Modal};
+
+mod download_results;
+use download_results::DownloadResults;
 
 #[component]
 pub fn Search() -> Element {
@@ -18,9 +22,25 @@ pub fn Search() -> Element {
     let mut artist = use_signal::<Option<String>>(|| None);
     let mut loading = use_signal(|| false);
     let mut viewing_album = use_signal::<Option<AlbumWithTracks>>(|| None);
+    let mut download_options = use_signal::<Option<Vec<SlskdAlbumResult>>>(|| None);
 
     let download = move |query: DownloadQuery| async move {
-        api::download(query).await;
+        loading.set(true);
+        viewing_album.set(None);
+        if let Ok(results) = api::search_downloads(query).await {
+            download_options.set(Some(results));
+        }
+        loading.set(false);
+    };
+
+    let download_tracks = move |tracks: Vec<SlskdTrackResult>| async move {
+        loading.set(true);
+        download_options.set(None);
+        if let Ok(_res) = api::download(tracks).await {
+            // TODO: Show download progress
+            info!("Downloads started");
+        }
+        loading.set(false);
     };
 
     let search_track = move || async move {
@@ -59,6 +79,17 @@ pub fn Search() -> Element {
         loading.set(false);
     };
 
+    if let Some(results) = download_options.read().clone() {
+        return rsx! {
+          DownloadResults {
+            results,
+            on_download: move |tracks| {
+                spawn(download_tracks(tracks));
+            },
+          }
+        };
+    }
+
     rsx! {
       if let Some(data) = viewing_album.read().clone() {
         Modal {
@@ -68,9 +99,8 @@ pub fn Search() -> Element {
           },
           Album {
             data,
-            on_select: move |data: DownloadQuery| async move {
-                download(data).await;
-                viewing_album.set(None);
+            on_select: move |data: DownloadQuery| {
+                spawn(download(data));
             },
           }
         }

@@ -15,7 +15,7 @@ pub fn AlbumFooter(props: Props) -> Element {
         Button {
           disabled: props.is_selection_empty,
           onclick: move |_| props.on_select.call(()),
-          "Add Selection to Download Queue"
+          "Search These Tracks"
         }
       }
     }
