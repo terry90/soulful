@@ -32,7 +32,6 @@ RUN npm install
 
 # Build the Tailwind CSS
 RUN npx @tailwindcss/cli -i ./web/assets/input.css -o ./web/assets/tailwind.css
-ENV IP=0.0.0.0
 
 # Build the application
 RUN dx bundle --package web --release
@@ -49,6 +48,8 @@ RUN apt-get update && apt-get install -y \
   pipx \
   ffmpeg \
   && rm -rf /var/lib/apt/lists/*
+
+ENV PIPX_BIN_DIR=/usr/local/bin
 
 # Install beets
 RUN pipx install beets

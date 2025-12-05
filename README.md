@@ -5,18 +5,16 @@ Soulful is a modern, self-hosted music downloader and manager. It bridges the ga
 ## Features
 
 -   **Unified Search**: Search for albums and tracks using MusicBrainz metadata and find sources on Soulseek.
--   **One-Click Download & Import**: Select an album, choose your target folder, and Soulful handles the rest.
+-   **One-Click Download & Import**: Select an album (or just some tracks), choose your target folder, and Soulful handles the rest.
 -   **Automated Importing**: Automatically monitors downloads and uses the `beets` CLI to tag, organize, and move files to your specified music folder.
--   **User Management**: Multi-user support with private folders. Each user can manage their own music library paths.
--   **Modern UI**: A responsive, clean interface built with Dioxus and Tailwind CSS.
--   **Private & Secure**: Self-hosted, login-protected (admin-managed registration).
+-   **User Management**: Multi-user support with private folders. Each user can manage their own music library paths. Or have a common folder.
 
 ## Architecture
 
 1.  **Soulful Web**: The main interface (Dioxus Fullstack).
 2.  **Slskd**: The Soulseek client backend. Soulful communicates with `slskd` to initiate and monitor downloads.
 3.  **Beets**: The music library manager. Soulful executes `beet import` to process finished downloads.
-4.  **SQLite**: Stores user accounts and folder configurations.
+4.  **SQLite**: Stores user accounts and folder configurations. (PostgreSQL compat can be added easily, maybe in the future)
 
 ## Self-Hosting with Docker
 
@@ -24,9 +22,7 @@ The recommended way to run Soulful is via Docker Compose. This ensures all depen
 
 ### Prerequisites
 
--   Docker & Docker Compose
--   A running instance of [slskd](https://github.com/slskd/slskd)
--   Access to your music directories
+-   Docker & Docker Compose (or podman-compose)
 
 ### Quick Start
 
@@ -80,13 +76,13 @@ docker-compose up -d --build
 
 ### Initial Setup
 
-1.  Open `http://localhost:8080`
+1.  Open `http://localhost:9765`
 2.  Login with the default credentials:
     -   Username: `admin`
     -   Password: `admin`
 3.  Go to **Settings**.
 4.  **Change your password** (Create a new user if you prefer and delete the admin later, or just change the admin logic if you forked the code).
-5.  **Add Music Folders**: Add the paths where you want your music to be stored (e.g., `/music/Rock`, `/music/Jazz`). These must be paths accessible inside the Docker container.
+5.  **Add Music Folders**: Add the paths where you want your music to be stored (e.g., `/music/Person1`, `/music/Person2`,  `/music/Shared`). These must be paths accessible inside the Docker container.
 
 ## Configuration
 
@@ -95,9 +91,9 @@ docker-compose up -d --build
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | Connection string for SQLite | `sqlite:soulful.db` |
-| `SLSKD_URL` | URL of your Slskd instance | `http://127.0.0.1:5030` |
-| `SLSKD_API_KEY` | API Key for Slskd | *(Default dev key)* |
-| `SLSKD_DOWNLOAD_PATH` | Path where Slskd downloads files | `/tmp/downloads` |
+| `SLSKD_URL` | URL of your Slskd instance | |
+| `SLSKD_API_KEY` | API Key for Slskd | |
+| `SLSKD_DOWNLOAD_PATH` | Path where Slskd downloads files | |
 | `BEETS_CONFIG` | Path to custom beets config file | `beets_config.yaml` |
 
 ### Beets Configuration
@@ -106,6 +102,7 @@ Soulful uses `beets` to import music. You can mount a custom `config.yaml` to `/
 
 Default `beet import` flags used:
 -   `-q`: Quiet mode (no user interaction)
+-   `-s`: Singleton mode (Works best at the moment, may change in the future)
 -   `-d [target_path]`: Import to the specific folder selected in the UI.
 
 ## Development
@@ -118,3 +115,10 @@ Default `beet import` flags used:
 3.  Run the app:
     ```bash
     dx serve --platform web
+
+## TODO
+
+- Mobile app (nothing much to do honestly)
+- Better scoring
+- Enhance the default beets configuration
+- Find a way to avoid album dups ? e.g `Clair Obscur_ Expedition 33 (Original Soundtrack)` & `Clair Obscur_ Expedition 33_ Original Soundtrack` - Rare but annoying

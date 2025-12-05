@@ -264,10 +264,40 @@ pub async fn download(
                                 target_path
                             );
 
+                            let download_path_base = std::env::var("SLSKD_DOWNLOAD_PATH")
+                                .unwrap_or_else(|_| "/downloads".to_string());
+                            let download_path_buf = std::path::PathBuf::from(&download_path_base);
+
                             let paths: Vec<String> = successful_downloads
                                 .iter()
-                                .map(|d| d.filename.clone())
+                                .filter_map(|d| {
+                                    // Normalize path separators (win -> linux)
+                                    let filename_str = d.filename.replace('\\', "/");
+                                    let path = std::path::Path::new(&filename_str);
+                                    let components: Vec<_> = path.components().collect();
+
+                                    // Keep only the last directory and filename (d1/d2/d3/file -> d3/file)
+                                    if components.len() >= 2 {
+                                        let len = components.len();
+                                        let last_dir = components[len - 2].as_os_str();
+                                        let file_name = components[len - 1].as_os_str();
+
+                                        let relative_path =
+                                            std::path::PathBuf::from(last_dir).join(file_name);
+                                        let full_path = download_path_buf.join(relative_path);
+
+                                        Some(full_path.to_string_lossy().to_string())
+                                    } else {
+                                        // Fallback
+                                        let full_path = download_path_buf.join(path);
+                                        Some(full_path.to_string_lossy().to_string())
+                                    }
+                                })
+                                .collect::<std::collections::HashSet<_>>()
+                                .into_iter()
                                 .collect();
+
+                            tracing::info!("Importing paths: {:?}", paths);
 
                             if let Err(e) = beets::import(paths, &target_path).await {
                                 info!("Beets import error: {}", e);

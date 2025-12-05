@@ -21,8 +21,8 @@ services:
       # Mount the beets config
       # Leave commented to use the default configuration
       # - ./beets_config.yaml:/app/beets_config.yaml
-    depends_on:
-      - slskd
+    # depends_on:
+    #   - slskd
   # Optional: Slskd service if you want to run it together
   # If you already have slskd running elsewhere, ensure Soulful can reach it via network
   # slskd:
@@ -31,7 +31,7 @@ services:
   #   environment:
   #     - SLSKD_REMOTE_CONFIGURATION=true
   #   volumes:
-  #     - ./slskd-config:/app/slskd.conf.d
+  #     - /path/to/your/slskd_data:/app
   #     - /path/to/your/downloads:/app/downloads
   #   ports:
   #     - "5030:5030"

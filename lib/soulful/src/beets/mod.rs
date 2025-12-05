@@ -19,18 +19,14 @@ pub async fn import(sources: Vec<String>, target: &Path) -> Result<()> {
     let mut cmd = Command::new("beet");
     cmd.arg("-c")
         .arg(&config_path)
-        .arg("import")
-        .arg("-q") // quiet mode: do not ask for confirmation
         .arg("-d") // destination directory
-        .arg(target);
+        .arg(target)
+        .arg("import")
+        .arg("-s") // singleton mode
+        .arg("-q"); // quiet mode: do not ask for confirmation
 
     for source in sources {
         cmd.arg(source);
-    }
-
-    // If SINGLETON_MODE env var is set, use -s
-    if std::env::var("BEETS_SINGLETON").is_ok() {
-        cmd.arg("-s");
     }
 
     let status = cmd.status().await?;
